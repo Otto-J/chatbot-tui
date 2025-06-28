@@ -16,6 +16,7 @@
         "node": ">=22"
     },
     "scripts": {
+        "test": "vitest",
         "dev": "tsup --watch --onSuccess 'node dist/cli.js'",
         "prebuild": "tsc -p src/tsconfig.json",
         "build": "tsup",
@@ -39,11 +40,14 @@
         "@stricli/auto-complete": "^1.1.2",
         "@stricli/core": "^1.1.2",
         "@types/blessed": "^0.1.25",
-        "blessed": "^0.1.81"
+        "axios": "^1.10.0",
+        "blessed": "^0.1.81",
+        "conf": "^14.0.0"
     },
     "devDependencies": {
         "@types/node": "22.x",
         "tsup": "^6.7.0",
-        "typescript": "5.6.x"
+        "typescript": "5.6.x",
+        "vitest": "^3.2.4"
     }
 }

@@ -1,26 +1,93 @@
 import { EventEmitter } from 'events';
+import axios from 'axios';
+import type { Message } from '../managers/ChatManager';
+import type { ConfigManager } from '../managers/ConfigManager';
 
-// 模拟的LLM服务
 export class LLMService extends EventEmitter {
-  async getCompletion(prompt: string) {
-    // 立即发出一个 "start" 事件
+  private configManager: ConfigManager;
+
+  constructor(configManager: ConfigManager) {
+    super();
+    this.configManager = configManager;
+  }
+
+  async getCompletion(messages: Message[]) {
     this.emit('start');
 
-    const thinkingMessage = 'AI is thinking...';
-    const responseMessage = `You said: "${prompt}". This is a simulated response.`;
-    const fullMessage = thinkingMessage + responseMessage;
-    let index = 0;
+    const apiKey = this.configManager.get('apiKey');
+    const apiEndpoint = this.configManager.get('apiEndpoint');
+    const model = this.configManager.get('defaultModel');
 
-    const interval = setInterval(() => {
-      if (index < fullMessage.length) {
-        // 发出 "data" 事件，传递单个字符
-        this.emit('data', fullMessage[index]);
-        index++;
+    if (!apiKey) {
+      this.emit('error', 'API key is not set. Please configure it in the settings.');
+      this.emit('end', null); // End the stream
+      return;
+    }
+
+    try {
+      const response = await axios.post(
+        `${apiEndpoint}/chat/completions`,
+        {
+          model: model,
+          messages: messages,
+          stream: true,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${apiKey}`,
+          },
+          responseType: 'stream',
+        }
+      );
+
+      let fullResponse = '';
+      const stream = response.data;
+
+      stream.on('data', (chunk: Buffer) => {
+        const lines = chunk.toString().split('\n');
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.substring(6);
+            if (data.trim() === '[DONE]') {
+              return;
+            }
+            try {
+              const json = JSON.parse(data);
+              const content = json.choices[0]?.delta?.content || '';
+              if (content) {
+                fullResponse += content;
+                this.emit('data', content);
+              }
+            } catch (error) {
+              // Ignore parsing errors for incomplete JSON chunks
+            }
+          }
+        }
+      });
+
+      stream.on('end', () => {
+        this.emit('end', fullResponse);
+      });
+
+      stream.on('error', (err: Error) => {
+        this.emit('error', `API stream error: ${err.message}`);
+      });
+
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        const status = error.response?.status;
+        let message = `API request failed with status ${status}.`;
+        if (status === 401) {
+            message = 'Authentication error (401). Please check your API key.';
+        } else if (status === 404) {
+            message = 'API endpoint not found (404). Please check your API endpoint configuration.';
+        }
+        this.emit('error', message);
       } else {
-        // 当消息结束时，清除定时器并发出 "end" 事件
-        clearInterval(interval);
-        this.emit('end');
+        this.emit('error', `An unknown error occurred: ${(error as Error).message}`);
       }
-    }, 50); // 每50毫秒发送一个字符，模拟流式效果
+      this.emit('end', null);
+    }
   }
 }
