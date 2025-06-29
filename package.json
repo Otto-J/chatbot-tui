@@ -18,6 +18,8 @@
   "scripts": {
     "test": "vitest",
     "dev": "tsup --watch --onSuccess 'node dist/cli.js'",
+    "chat": "bun run src/simple_chat.ts",
+    "chat2": "tsup src/simple_chat.ts --onSuccess 'node dist/simple_chat.js'",
     "prebuild": "tsc -p src/tsconfig.json",
     "build": "tsup",
     "prepublishOnly": "npm run build",

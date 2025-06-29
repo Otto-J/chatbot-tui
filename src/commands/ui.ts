@@ -32,9 +32,9 @@ export async function startTUI(): Promise<void> {
   screen.append(box)
 
   // If box is focused, handle `enter`/`return` and `escape` keys.
-  box.key(['enter', 'escape'], function (ch, key) {
-    // Handled by the 'q' and 'C-c' bindings below
-  })
+  // box.key(['enter', 'escape'], function (ch, key) {
+  //   // Handled by the 'q' and 'C-c' bindings below
+  // })
 
   // Quit on 'q' or Control-C.
   // screen.key(["q", "C-c"], function (ch, key) {

@@ -8,6 +8,7 @@
   - **Attempted Fixes:**
     1.  Removed `keys: true` from the `chatLog` component. This did not solve the problem.
   - **Next Steps:** Investigate other potential sources of the event duplication. Add debug logging to trace which component has focus during a `keypress` event.
+- [ ] **Fix input double character and deletion issue:** Investigate and fix the bug where each keystroke in the input box results in two characters appearing, and deletion is not working correctly.
 
 ## Future Features
 

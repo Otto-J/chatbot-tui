@@ -212,6 +212,10 @@ async function startTUI(): Promise<void> {
   })
 
   // --- 交互逻辑 ---
+  inputBox.on('keypress', (ch, key) => {
+    key.stopPropagation();
+  });
+
   inputBox.on('submit', (text) => {
     if (text.trim()) {
       const activeSession = chatManager.getActiveSession()
