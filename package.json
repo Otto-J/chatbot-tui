@@ -42,7 +42,8 @@
         "@types/blessed": "^0.1.25",
         "axios": "^1.10.0",
         "blessed": "^0.1.81",
-        "conf": "^14.0.0"
+        "conf": "^14.0.0",
+        "dotenv": "^17.0.0"
     },
     "devDependencies": {
         "@types/node": "22.x",

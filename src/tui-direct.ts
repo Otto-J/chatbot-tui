@@ -15,7 +15,7 @@ async function startTUI(): Promise<void> {
   const configManager = new ConfigManager();
   const chatManager = new ChatManager();
   chatManager.initialize(); // Set up default session
-  // const llmService = new LLMService(configManager);
+  const llmService = new LLMService(configManager);
 
   // --- UI 更新函数 ---
   function updateHistoryList() {
@@ -36,6 +36,7 @@ async function startTUI(): Promise<void> {
         chatLog.log(`{${color}}${prefix}:{/} ${msg.content}`);
       });
     }
+    inputBox.focus(); // <--- ADD THIS LINE
     screen.render();
   }
 
@@ -80,7 +81,7 @@ async function startTUI(): Promise<void> {
   });
 
   // --- 右侧主内容区 ---
-  const mainContentContainer = blessed.box({
+  const mainAreaContainer = blessed.box({
     parent: screen,
     top: 0,
     left: "30%",
@@ -88,8 +89,26 @@ async function startTUI(): Promise<void> {
     height: "100%",
   });
 
+  // --- View Containers ---
+  const chatView = blessed.box({
+    parent: mainAreaContainer,
+    width: '100%',
+    height: '100%',
+  });
+
+  const settingsView = blessed.form({
+    parent: mainAreaContainer,
+    width: '100%',
+    height: '100%',
+    hidden: true, // Initially hidden
+    keys: true,
+    border: 'line',
+    label: '设置',
+  });
+
+  // --- Chat View Components ---
   const header = blessed.text({
-    parent: mainContentContainer,
+    parent: chatView,
     top: 0,
     left: 1,
     height: 1,
@@ -98,7 +117,7 @@ async function startTUI(): Promise<void> {
   });
 
   const chatLog = blessed.log({
-    parent: mainContentContainer,
+    parent: chatView,
     top: 1,
     left: 0,
     width: "100%-2",
@@ -107,13 +126,12 @@ async function startTUI(): Promise<void> {
     scrollable: true,
     alwaysScroll: true,
     scrollbar: { ch: " ", style: { bg: "red" } },
-    keys: true,
     mouse: true,
     tags: true,
   });
 
   const inputBox = blessed.textbox({
-    parent: mainContentContainer,
+    parent: chatView,
     bottom: 0,
     left: 0,
     width: "100%-2",
@@ -123,48 +141,76 @@ async function startTUI(): Promise<void> {
     inputOnFocus: true,
   });
 
-  // --- 服务实例化 ---
-  const llmService = new LLMService(configManager);
+  // --- Settings View Components ---
+  blessed.text({ parent: settingsView, top: 2, left: 5, content: 'API Key:' });
+  const apiKeyInput = blessed.textbox({
+    parent: settingsView, name: 'apiKey', top: 3, left: 5, height: 1, width: '80%',
+    style: { bg: 'blue' }, value: configManager.get('apiKey'),
+  });
+
+  blessed.text({ parent: settingsView, top: 6, left: 5, content: 'API Endpoint:' });
+  const apiEndpointInput = blessed.textbox({
+    parent: settingsView, name: 'apiEndpoint', top: 7, left: 5, height: 1, width: '80%',
+    style: { bg: 'blue' }, value: configManager.get('apiEndpoint'),
+  });
+
+  blessed.text({ parent: settingsView, top: 10, left: 5, content: 'Default Model:' });
+  const defaultModelInput = blessed.textbox({
+    parent: settingsView, name: 'defaultModel', top: 11, left: 5, height: 1, width: '80%',
+    style: { bg: 'blue' }, value: configManager.get('defaultModel'),
+  });
+
+  const saveButton = blessed.button({
+    parent: settingsView, name: 'save', content: 'Save', top: 15, left: 5, width: 10, height: 1,
+    style: { bg: 'green', focus: { bg: 'lightgreen' } },
+  });
+
+  const statusLine = blessed.text({
+      parent: settingsView,
+      bottom: 1,
+      left: 5,
+      height: 1,
+      content: `Config file: ${configManager.configPath}`
+  });
+
+  saveButton.on('press', () => settingsView.submit());
+
+  settingsView.on('submit', (data) => {
+    configManager.set('apiKey', data.apiKey as string);
+    configManager.set('apiEndpoint', data.apiEndpoint as string);
+    configManager.set('defaultModel', data.defaultModel as string);
+    statusLine.setContent('Settings saved!');
+    screen.render();
+    setTimeout(() => {
+        statusLine.setContent(`Config file: ${configManager.configPath}`);
+        screen.render();
+    }, 2000);
+  });
 
   // --- 交互逻辑 ---
   inputBox.on("submit", (text) => {
     if (text.trim()) {
       const activeSession = chatManager.getActiveSession();
       if (activeSession) {
-        chatManager.addMessage(activeSession.id, {
-          role: "user",
-          content: text,
-        });
+        chatManager.addMessage(activeSession.id, { role: "user", content: text });
         chatLog.log(`{blue-fg}You:{/} ${text}`);
         inputBox.clearValue();
         screen.render();
-        // Pass the full message history to the LLM service
         llmService.getCompletion(activeSession.messages);
       }
     }
   });
 
-  llmService.on("start", () => {
-    chatLog.log(`{green-fg}AI:{/} `);
-  });
-
-  llmService.on("data", (chunk) => {
-    chatLog.add(chunk);
-    screen.render();
-  });
-
+  llmService.on("start", () => { chatLog.log(`{green-fg}AI:{/} `); });
+  llmService.on("data", (chunk) => { chatLog.add(chunk); screen.render(); });
   llmService.on("end", (fullResponse) => {
     const activeSession = chatManager.getActiveSession();
     if (activeSession && fullResponse) {
-      chatManager.addMessage(activeSession.id, {
-        role: "assistant",
-        content: fullResponse,
-      });
+      chatManager.addMessage(activeSession.id, { role: "assistant", content: fullResponse });
     }
     inputBox.focus();
     screen.render();
   });
-
   llmService.on("error", (errorMessage) => {
     chatLog.log(`{red-fg}Error: ${errorMessage}{/}`);
     inputBox.focus();
@@ -173,10 +219,21 @@ async function startTUI(): Promise<void> {
 
   historyList.on("select", (item, index) => {
     const sessions = chatManager.getSessions();
-    const selectedSession = sessions[index];
-    if (selectedSession) {
-      loadSession(selectedSession.id);
+    loadSession(sessions[index].id);
+    inputBox.focus(); // Explicitly focus input box on selection
+  });
+  
+  navMenu.on('select', (item) => {
+    const selection = item.getText();
+    if (selection.includes('Chat')) {
+      chatView.show();
+      settingsView.hide();
+    } else if (selection.includes('设置')) {
+      chatView.hide();
+      settingsView.show();
+      apiKeyInput.focus();
     }
+    screen.render();
   });
 
   // --- 全局快捷键 ---
@@ -186,10 +243,6 @@ async function startTUI(): Promise<void> {
     loadSession(newSession.id);
     historyList.select(0);
     inputBox.focus();
-  });
-
-  screen.key(["tab"], (ch, key) => {
-    key.shift ? screen.focusPrevious() : screen.focusNext();
   });
 
   screen.key(["q", "C-c"], (ch, key) => {

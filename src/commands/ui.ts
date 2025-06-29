@@ -37,9 +37,9 @@ export async function startTUI(): Promise<void> {
   });
 
   // Quit on 'q' or Control-C.
-  screen.key(["q", "C-c"], function (ch, key) {
-    return process.exit(0);
-  });
+  // screen.key(["q", "C-c"], function (ch, key) {
+  //   return process.exit(0);
+  // });
 
   // Focus our element.
   box.focus();
