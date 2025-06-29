@@ -1,9 +1,9 @@
-import type { LocalContext } from "../../context";
+import type { LocalContext } from '../../context'
 
 interface SubdirCommandFlags {
-    // ...
+  // ...
 }
 
-export default async function(this: LocalContext, flags: SubdirCommandFlags): Promise<void> {
-    // ...
+export default async function (this: LocalContext, flags: SubdirCommandFlags): Promise<void> {
+  // ...
 }
