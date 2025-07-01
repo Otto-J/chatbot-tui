@@ -19,7 +19,7 @@
     "test": "vitest",
     "dev": "bun run --watch src/simple_chat.ts",
     "chat": "bun run src/simple_chat.ts",
-    "build": "bun build src/simple_chat.ts --outdir dist --target node"
+    "build": "bun build src/simple_chat.ts --outdir dist --target node --external blessed"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^0.2.14",

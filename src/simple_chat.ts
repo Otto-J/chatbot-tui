@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import blessed from 'blessed'
 // import { LLMService } from './services/LLMService.js'
 import { LLMServiceV2 } from './services/LLMServiceV2.js'
@@ -192,36 +194,36 @@ const getContextMessages = (newUserMessage: string): Message[] => {
 
 // Handle input submission
 inputBox.key('enter', async () => {
-  const value = inputBox.getValue();
+  const value = inputBox.getValue()
   if (value.trim() === '/clear') {
     // Clear chat history and display
-    chatHistory.length = 0;
-    displayBox.setContent('=== Chat Cleared ===\n');
-    updateStatus();
-    inputBox.clearValue();
-    inputBox.focus();
-    screen.render();
-    return;
+    chatHistory.length = 0
+    displayBox.setContent('=== Chat Cleared ===\n')
+    updateStatus()
+    inputBox.clearValue()
+    inputBox.focus()
+    screen.render()
+    return
   }
 
   if (value.trim()) {
-    addMessage('You', value);
+    addMessage('You', value)
 
-    inputBox.clearValue();
-    inputBox.focus();
-    screen.render();
+    inputBox.clearValue()
+    inputBox.focus()
+    screen.render()
 
     try {
       // 获取包含上下文的消息数组
-      const contextMessages = getContextMessages(value.trim());
-      startAIResponse(value.trim());
-      llmService.getCompletion(contextMessages);
+      const contextMessages = getContextMessages(value.trim())
+      startAIResponse(value.trim())
+      llmService.getCompletion(contextMessages)
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
-      addMessage('Error', errorMessage);
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.'
+      addMessage('Error', errorMessage)
     }
   }
-});
+})
 
 // 处理AI回复的数据流
 llmService.on('data', (chunk) => {
@@ -294,4 +296,3 @@ inputBox.focus()
 // Render the screen.
 updateStatus()
 screen.render()
-
