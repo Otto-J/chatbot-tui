@@ -20,11 +20,8 @@ export class LLMServiceV2 extends EventEmitter {
 
     this.provider = createOpenAICompatible({
       name: 'custom-llm',
-      apiKey: apiKey || process.env['AI_API_KEY'] || '',
-      baseURL:
-        apiEndpoint ||
-        process.env['AI_BASE_URL'] ||
-        'https://dashscope.aliyuncs.com/compatible-mode/v1',
+      apiKey: apiKey || '',
+      baseURL: apiEndpoint,
     })
   }
 
@@ -32,10 +29,9 @@ export class LLMServiceV2 extends EventEmitter {
     this.emit('start')
 
     const apiKey = this.configManager.get('apiKey')
-    const model =
-      this.configManager.get('defaultModel') || process.env['AI_MODEL'] || 'qwen-turbo-latest'
+    const model = this.configManager.get('defaultModel')
 
-    if (!apiKey && !process.env['AI_API_KEY']) {
+    if (!apiKey) {
       this.emit('error', 'API key is not set. Please configure it in the settings.')
       this.emit('end', null)
       return
@@ -86,10 +82,9 @@ export class LLMServiceV2 extends EventEmitter {
   // 额外的便捷方法：获取非流式响应
   async getSimpleCompletion(messages: Message[]): Promise<string> {
     const apiKey = this.configManager.get('apiKey')
-    const model =
-      this.configManager.get('defaultModel') || process.env['AI_MODEL'] || 'qwen-turbo-latest'
+    const model = this.configManager.get('defaultModel')
 
-    if (!apiKey && !process.env['AI_API_KEY']) {
+    if (!apiKey) {
       throw new Error('API key is not set. Please configure it in the settings.')
     }
 

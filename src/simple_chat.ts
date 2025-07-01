@@ -1,11 +1,15 @@
 import blessed from 'blessed'
-import { LLMService } from './services/LLMService.js'
+// import { LLMService } from './services/LLMService.js'
 import { LLMServiceV2 } from './services/LLMServiceV2.js'
 import { ConfigManager } from './managers/ConfigManager.js'
+import type { Message } from './managers/ChatManager.js'
 
 const configManager = new ConfigManager()
 // 使用新的基于ai SDK的LLMService
 const llmService = new LLMServiceV2(configManager)
+
+// 聊天历史记录
+const chatHistory: Message[] = []
 
 // Create a screen object with UTF-8 support
 const screen = blessed.screen({
@@ -125,7 +129,7 @@ const updateAIMessage = (chunk: string) => {
   screen.render()
 }
 
-const startAIResponse = () => {
+const startAIResponse = (userMessage: string) => {
   let currentContent = displayBox.getContent()
   if (currentContent === 'Terminal ChatBot' || currentContent.trim() === '') {
     currentContent = '=== 聊天开始 ===\n'
@@ -133,25 +137,55 @@ const startAIResponse = () => {
   baseContent = currentContent
   currentAIResponse = ''
   isAIResponding = true
+
+  // 在开始AI回复时，将用户消息添加到聊天历史
+  chatHistory.push({
+    role: 'user',
+    content: userMessage,
+  })
 }
 
 const endAIResponse = () => {
   isAIResponding = false
+  // 将AI回复添加到聊天历史
+  if (currentAIResponse.trim()) {
+    chatHistory.push({
+      role: 'assistant',
+      content: currentAIResponse.trim(),
+    })
+  }
   // 确保最终消息被保存到baseContent中
   baseContent = displayBox.getContent()
+}
+
+// 获取上下文消息（限制数量）
+const getContextMessages = (newUserMessage: string): Message[] => {
+  const contextLength = configManager.get('contextLength')
+
+  // 获取最近的聊天历史（不包括当前用户消息）
+  const recentHistory = chatHistory.slice(-Math.max(0, contextLength - 1))
+
+  // 添加当前用户消息
+  return [...recentHistory, { role: 'user' as const, content: newUserMessage }]
 }
 
 // Handle input submission
 inputBox.on('submit', async (value) => {
   if (value.trim()) {
     addMessage('You', value)
+
     inputBox.clearValue()
     inputBox.focus()
     screen.render()
 
     try {
-      startAIResponse()
-      llmService.getCompletion([{ role: 'user', content: value }])
+      // 获取包含上下文的消息数组
+      const contextMessages = getContextMessages(value.trim())
+      console.log(
+        `📝 携带 ${contextMessages.length} 条上下文消息 (配置限制: ${configManager.get('contextLength')} 条)`,
+      )
+      startAIResponse(value.trim())
+      llmService.getCompletion(contextMessages)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.'
       addMessage('Error', errorMessage)
@@ -167,7 +201,7 @@ llmService.on('data', (chunk) => {
 })
 
 // 处理AI回复结束
-llmService.on('end', (fullResponse) => {
+llmService.on('end', (_fullResponse) => {
   endAIResponse()
 })
 
@@ -215,7 +249,7 @@ screen.key(['tab'], function () {
 })
 
 // Quit on Control-C
-screen.key(['C-c'], function (ch, key) {
+screen.key(['C-c'], function (_ch, _key) {
   return process.exit(0)
 })
 

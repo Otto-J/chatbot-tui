@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { ChatManager, Session, Message } from './ChatManager'
+import { ChatManager, type Message } from './ChatManager'
 
 describe('ChatManager', () => {
   let chatManager: ChatManager
@@ -22,7 +22,7 @@ describe('ChatManager', () => {
     const activeSession = chatManager.getActiveSession()
     expect(activeSession).toBeDefined()
     expect(activeSession?.id).toBe(newSession.id)
-    expect(sessions[0].title).toBe('Test Session')
+    expect(sessions[0]!.title).toBe('Test Session')
   })
 
   it('should add a message to the active session', () => {
@@ -55,7 +55,7 @@ describe('ChatManager', () => {
     chatManager.createNewSession('Second')
 
     const sessions = chatManager.getSessions()
-    expect(sessions[0].title).toBe('Second')
-    expect(sessions[1].title).toBe('First')
+    expect(sessions[0]!.title).toBe('Second')
+    expect(sessions[1]!.title).toBe('First')
   })
 })
