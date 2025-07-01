@@ -58,11 +58,11 @@ const displayBox = blessed.box({
 })
 
 // Create an input box
-const inputBox = blessed.textbox({
+const inputBox = blessed.textarea({
   top: '85%',
   left: 0,
   width: '100%',
-  height: '15%',
+  height: '12%',
   content: '',
   border: {
     type: 'line',
@@ -83,13 +83,24 @@ const inputBox = blessed.textbox({
   keys: true,
 })
 
+const statusBar = blessed.text({
+  top: '97%',
+  left: 0,
+  width: '100%',
+  height: '3%',
+  style: {
+    fg: 'yellow',
+  },
+  content: 'loading...',
+})
+
 // Create a label for the input box
 const inputLabel = blessed.text({
   top: 0,
   left: 1,
   width: '100%',
   height: 1,
-  content: '输入消息后按Enter发送 | Ctrl+C退出 | ↑↓滚动聊天记录',
+  content: 'Enter to send | Ctrl+Enter for newline | Ctrl+C to exit | ↑↓ to scroll',
   style: {
     fg: 'yellow',
   },
@@ -100,11 +111,19 @@ const inputLabel = blessed.text({
 screen.append(displayBox)
 screen.append(inputBox)
 screen.append(inputLabel)
+screen.append(statusBar)
 
 // 用于跟踪当前AI回复的变量
 let currentAIResponse = ''
 let isAIResponding = false
 let baseContent = ''
+
+const updateStatus = () => {
+  const contextLength = configManager.get('contextLength')
+  const used = chatHistory.length
+  statusBar.setContent(`Context: ${used}/${contextLength}`)
+  screen.render()
+}
 
 const addMessage = (prefix: string, message: string) => {
   const now = new Date()
@@ -143,6 +162,7 @@ const startAIResponse = (userMessage: string) => {
     role: 'user',
     content: userMessage,
   })
+  updateStatus()
 }
 
 const endAIResponse = () => {
@@ -156,6 +176,7 @@ const endAIResponse = () => {
   }
   // 确保最终消息被保存到baseContent中
   baseContent = displayBox.getContent()
+  updateStatus()
 }
 
 // 获取上下文消息（限制数量）
@@ -170,28 +191,37 @@ const getContextMessages = (newUserMessage: string): Message[] => {
 }
 
 // Handle input submission
-inputBox.on('submit', async (value) => {
-  if (value.trim()) {
-    addMessage('You', value)
+inputBox.key('enter', async () => {
+  const value = inputBox.getValue();
+  if (value.trim() === '/clear') {
+    // Clear chat history and display
+    chatHistory.length = 0;
+    displayBox.setContent('=== Chat Cleared ===\n');
+    updateStatus();
+    inputBox.clearValue();
+    inputBox.focus();
+    screen.render();
+    return;
+  }
 
-    inputBox.clearValue()
-    inputBox.focus()
-    screen.render()
+  if (value.trim()) {
+    addMessage('You', value);
+
+    inputBox.clearValue();
+    inputBox.focus();
+    screen.render();
 
     try {
       // 获取包含上下文的消息数组
-      const contextMessages = getContextMessages(value.trim())
-      console.log(
-        `📝 携带 ${contextMessages.length} 条上下文消息 (配置限制: ${configManager.get('contextLength')} 条)`,
-      )
-      startAIResponse(value.trim())
-      llmService.getCompletion(contextMessages)
+      const contextMessages = getContextMessages(value.trim());
+      startAIResponse(value.trim());
+      llmService.getCompletion(contextMessages);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.'
-      addMessage('Error', errorMessage)
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred.';
+      addMessage('Error', errorMessage);
     }
   }
-})
+});
 
 // 处理AI回复的数据流
 llmService.on('data', (chunk) => {
@@ -214,6 +244,11 @@ llmService.on('error', (error) => {
 // Handle escape key to clear input
 inputBox.key('escape', function () {
   inputBox.clearValue()
+  screen.render()
+})
+
+inputBox.key('S-enter', function () {
+  inputBox.setValue(inputBox.getValue() + '\n')
   screen.render()
 })
 
@@ -257,4 +292,6 @@ screen.key(['C-c'], function (_ch, _key) {
 inputBox.focus()
 
 // Render the screen.
+updateStatus()
 screen.render()
+
