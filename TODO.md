@@ -16,3 +16,6 @@
 - [ ] **Agent & Knowledge Base Views:** Implement the UI and logic for the placeholder "Agent" and "知识库" views.
 - [ ] **Polish UI/UX:** Improve visual elements, add loading indicators, and refine component interactions.
 - [ ] **Packaging for `npx`:** Restore `stricli` functionality and configure `package.json` for publishing.
+- [ ] **Improve input UI:** Move context message below the input box and display as `used/total`.
+- [ ] **Add support for multiline input:** Use Ctrl+Enter to add a newline in the input box.
+- [ ] **Refactor build process and packaging:** Replace `pnpm` and `tsup` with `bun`, use `bun build` for the build process, and register the `npm run chat` command as a `bin` executable.

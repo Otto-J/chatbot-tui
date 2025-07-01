@@ -10,33 +10,16 @@
   ],
   "bin": {
     "chatbot-tui": "dist/cli.js",
-    "__chatbot-tui_bash_complete": "dist/bash-complete.js"
+    "chat": "dist/simple_chat.js"
   },
   "engines": {
     "node": ">=22"
   },
   "scripts": {
     "test": "vitest",
-    "dev": "tsup --watch --onSuccess 'node dist/cli.js'",
+    "dev": "bun run --watch src/simple_chat.ts",
     "chat": "bun run src/simple_chat.ts",
-    "chat2": "tsup src/simple_chat.ts --onSuccess 'node dist/simple_chat.js'",
-    "prebuild": "tsc -p src/tsconfig.json",
-    "build": "tsup",
-    "prepublishOnly": "npm run build",
-    "postinstall": "chatbot-tui install"
-  },
-  "tsup": {
-    "entry": [
-      "src/bin/cli.ts",
-      "src/bin/bash-complete.ts"
-    ],
-    "format": [
-      "esm"
-    ],
-    "tsconfig": "src/tsconfig.json",
-    "clean": true,
-    "splitting": true,
-    "minify": true
+    "build": "bun build src/simple_chat.ts --outdir dist --target node"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "^0.2.14",
@@ -53,7 +36,6 @@
   "devDependencies": {
     "@types/node": "22.x",
     "prettier": "^3.6.2",
-    "tsup": "^6.7.0",
     "typescript": "5.6.x",
     "vitest": "^3.2.4"
   }
